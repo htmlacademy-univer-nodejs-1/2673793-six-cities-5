@@ -13,7 +13,8 @@ export default class CommentService implements CommentServiceInterface {
   constructor(
     @inject(Component.CommentModel) private readonly commentModel: types.ModelType<CommentEntity>,
     @inject(Component.OfferServiceInterface) private readonly offerService: OfferServiceInterface
-  ) {}
+  ) {
+  }
 
   public async createForOffer(dto: CreateCommentDto): Promise<DocumentType<CommentEntity>> {
     const comment = await this.commentModel.create(dto);
