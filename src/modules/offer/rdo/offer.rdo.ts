@@ -1,35 +1,64 @@
-import { Expose } from 'class-transformer';
+import {Expose, Type} from 'class-transformer';
 import {CityEnum} from '../../../types/city.enum.js';
 import {HousingType} from '../../../types/housing-type.enum.js';
+import {Facilities} from '../../../types/facilities.enum.js';
+import {UserType} from '../../../types/user.type.js';
+import {CoordinatesType} from '../../../types/coordinates.type.js';
+import UserRdo from '../../user/rdo/user.rdo.js';
 
 export class OfferRdo {
   @Expose()
-    name!: string;
+  public id!: string;
 
   @Expose()
-    publicationDate!: Date;
+  name!: string;
 
   @Expose()
-    city!: CityEnum;
+  publicationDate!: Date;
 
   @Expose()
-    previewImage!: string;
+  description!: string;
 
   @Expose()
-    premium!: boolean;
+  city!: CityEnum;
 
   @Expose()
-    favorite!: boolean;
+  previewImage!: string;
 
   @Expose()
-    rating!: number;
+  images!: string[];
 
   @Expose()
-    housingType!: HousingType;
+  premium!: boolean;
 
   @Expose()
-    cost!: number;
+  favorite!: boolean;
 
   @Expose()
-    commentsCount!: number;
+  rating!: number;
+
+  @Expose()
+  housingType!: HousingType;
+
+  @Expose()
+  cost!: number;
+
+  @Expose()
+  commentsCount!: number;
+
+  @Expose()
+  roomCount!: number;
+
+  @Expose()
+  guestCount!: number;
+
+  @Expose()
+  facilities!: Facilities[];
+
+  @Expose({name: 'userId'})
+  @Type(() => UserRdo)
+  offerAuthor!: UserType;
+
+  @Expose()
+  coordinates!: CoordinatesType;
 }
