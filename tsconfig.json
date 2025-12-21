@@ -20,6 +20,7 @@
     "sourceMap": true,
     "outDir": "./dist",
     "emitDecoratorMetadata": true,
+    "resolveJsonModule": true,
     "types": [
       "node",
     ],
@@ -36,6 +37,7 @@
     "**/*.test.ts"
   ],
   "ts-node": {
-    "esm": true
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
   }
 }
