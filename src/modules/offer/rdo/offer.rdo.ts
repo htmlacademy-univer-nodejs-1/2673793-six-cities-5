@@ -11,54 +11,54 @@ export class OfferRdo {
   public id!: string;
 
   @Expose()
-  name!: string;
+    name!: string;
 
   @Expose()
-  publicationDate!: Date;
+    publicationDate!: Date;
 
   @Expose()
-  description!: string;
+    description!: string;
 
   @Expose()
-  city!: CityEnum;
+    city!: CityEnum;
 
   @Expose()
-  previewImage!: string;
+    previewImage!: string;
 
   @Expose()
-  images!: string[];
+    images!: string[];
 
   @Expose()
-  premium!: boolean;
+    premium!: boolean;
 
   @Expose()
-  favorite!: boolean;
+    favorite!: boolean;
 
   @Expose()
-  rating!: number;
+    rating!: number;
 
   @Expose()
-  housingType!: HousingType;
+    housingType!: HousingType;
 
   @Expose()
-  cost!: number;
+    cost!: number;
 
   @Expose()
-  commentsCount!: number;
+    commentsCount!: number;
 
   @Expose()
-  roomCount!: number;
+    roomCount!: number;
 
   @Expose()
-  guestCount!: number;
+    guestCount!: number;
 
   @Expose()
-  facilities!: Facilities[];
+    facilities!: Facilities[];
 
   @Expose({name: 'userId'})
   @Type(() => UserRdo)
-  offerAuthor!: UserType;
+    offerAuthor!: UserType;
 
   @Expose()
-  coordinates!: CoordinatesType;
+    coordinates!: CoordinatesType;
 }
