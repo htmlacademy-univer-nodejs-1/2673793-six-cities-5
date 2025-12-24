@@ -18,44 +18,40 @@ import UpdateOfferDto from './dto/update-offer.dto.js';
 import { OfferServiceInterface } from './offer-service.interface.js';
 import { FavoriteOfferShortDto } from './rdo/favorite-offer-short.dto.js';
 import { OfferRdo } from './rdo/offer.rdo.js';
-import { CreateOfferRequest } from './type/create-offer.request.js';
-import {PrivateRouteMiddleware} from '../../common/middleware/private-route.middleware.js';
+import { PrivateRouteMiddleware } from '../../common/middleware/private-route.middleware.js';
+import { ConfigInterface } from '../../common/config/config.interface.js';
+import { ConfigSchema } from '../../common/config/config.schema.js';
+import { UploadFileMiddleware } from '../../common/middleware/upload-file.middleware.js';
+import UploadImageResponse from './rdo/upload-image.response.js';
+import { RequestBody, RequestParams } from '../../common/http/requests.js';
+import { HttpError } from '../../common/http/http.errors.js';
+import { StatusCodes } from 'http-status-codes';
+import { OfferShortRdo } from './rdo/offer-short.rdo.js';
 
 @injectable()
 export default class OfferController extends Controller {
-  constructor(@inject(Component.LoggerInterface) logger: LoggerInterface,
-              @inject(Component.OfferServiceInterface) private readonly offerService: OfferServiceInterface,
-              @inject(Component.UserServiceInterface) private readonly userService: UserServiceInterface,
-              @inject(Component.CommentServiceInterface) private readonly commentService: CommentServiceInterface
+  constructor(
+    @inject(Component.LoggerInterface) logger: LoggerInterface,
+    @inject(Component.OfferServiceInterface) private readonly offerService: OfferServiceInterface,
+    @inject(Component.UserServiceInterface) private readonly userService: UserServiceInterface,
+    @inject(Component.CommentServiceInterface) private readonly commentService: CommentServiceInterface,
+    @inject(Component.ConfigInterface) configService: ConfigInterface<ConfigSchema>
   ) {
-    super(logger);
+    super(logger, configService);
 
-    this.addRoute({
-      path: '/',
-      method: HttpMethod.Get,
-      handler: this.index
-    });
-
+    this.addRoute({ path: '/', method: HttpMethod.Get, handler: this.index });
     this.addRoute({
       path: '/',
       method: HttpMethod.Post,
       handler: this.create,
-      middlewares: [
-        new PrivateRouteMiddleware(),
-        new ValidateDtoMiddleware(CreateOfferDto)
-      ]
+      middlewares: [new PrivateRouteMiddleware(), new ValidateDtoMiddleware(CreateOfferDto)]
     });
-
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Get,
       handler: this.show,
-      middlewares: [
-        new ValidateObjectIdMiddleware('offerId'),
-        new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
-      ]
+      middlewares: [new ValidateObjectIdMiddleware('offerId'), new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')]
     });
-
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Patch,
@@ -67,97 +63,144 @@ export default class OfferController extends Controller {
         new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
       ]
     });
-
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Delete,
       handler: this.delete,
-      middlewares: [
-        new PrivateRouteMiddleware(),
-        new ValidateObjectIdMiddleware('offerId')
-      ]
+      middlewares: [new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId'), new PrivateRouteMiddleware(), new ValidateObjectIdMiddleware('offerId')]
     });
-
-    this.addRoute({
-      path: '/premium/:city',
-      method: HttpMethod.Get,
-      handler: this.showPremium
-    });
-
+    this.addRoute({ path: '/premium/:city', method: HttpMethod.Get, handler: this.showPremium });
     this.addRoute({
       path: '/favorites/:offerId',
       method: HttpMethod.Post,
       handler: this.addFavorite,
-      middlewares: [
-        new PrivateRouteMiddleware(),
-        new ValidateObjectIdMiddleware('offerId'),
-        new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
-      ]
+      middlewares: [new PrivateRouteMiddleware(), new ValidateObjectIdMiddleware('offerId'), new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')]
     });
-
     this.addRoute({
       path: '/favorites/:offerId',
       method: HttpMethod.Delete,
       handler: this.deleteFavorite,
+      middlewares: [new PrivateRouteMiddleware(), new ValidateObjectIdMiddleware('offerId'), new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')]
+    });
+    this.addRoute({
+      path: '/users/favorites',
+      method: HttpMethod.Get,
+      handler: this.showFavorites,
+      middlewares: [new PrivateRouteMiddleware()]
+    });
+    this.addRoute({
+      path: '/:offerId/preview-image',
+      method: HttpMethod.Post,
+      handler: this.uploadPreviewImage,
       middlewares: [
         new PrivateRouteMiddleware(),
         new ValidateObjectIdMiddleware('offerId'),
-        new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
+        new UploadFileMiddleware(this.configService.get('UPLOAD_DIRECTORY'), 'previewImage')
       ]
     });
-
     this.addRoute({
-      path: '/favorites',
-      method: HttpMethod.Get,
-      handler: this.showFavorites,
-      middlewares:[new PrivateRouteMiddleware()]
+      path: '/:offerId/image',
+      method: HttpMethod.Post,
+      handler: this.uploadImage,
+      middlewares: [
+        new PrivateRouteMiddleware(),
+        new ValidateObjectIdMiddleware('offerId'),
+        new UploadFileMiddleware(this.configService.get('UPLOAD_DIRECTORY'), 'image')
+      ]
+    });
+    this.addRoute({
+      path: '/:offerId/image',
+      method: HttpMethod.Delete,
+      handler: this.removeImage,
+      middlewares: [
+        new PrivateRouteMiddleware(),
+        new ValidateObjectIdMiddleware('offerId'),
+        new UploadFileMiddleware(this.configService.get('UPLOAD_DIRECTORY'), 'image')
+      ]
     });
   }
 
-  public async index({params}: Request<ParamsOffersCount>, res: Response): Promise<void> {
-    const offerCount = params.count ? parseInt(`${params.count}`, 10) : undefined;
+  private parseOfferCount(count?: string): number | undefined {
+    return count ? parseInt(count, 10) : undefined;
+  }
+
+  private async getOfferAndCheckOwner(offerId: string, userId: string, source: string) {
+    const offer = await this.offerService.findById(offerId);
+    if (offer?.userId.id !== userId) {
+      throw new HttpError(StatusCodes.BAD_REQUEST, 'Offer was created other user', source);
+    }
+    return offer;
+  }
+
+  private async updatePreviewImage(offerId: string, filename?: string) {
+    await this.offerService.updateById(offerId, { previewImage: filename });
+  }
+
+  public async index({ params }: Request<ParamsOffersCount>, res: Response): Promise<void> {
+    const offerCount = this.parseOfferCount(params.count);
     const offers = await this.offerService.find(offerCount);
-    this.ok(res, fillDTO(OfferRdo, offers));
+    this.ok(res, fillDTO(OfferShortRdo, offers));
   }
 
-  public async create({body}: CreateOfferRequest, res: Response): Promise<void> {
-    const result = await this.offerService.create(body);
-    this.created(res, result);
+  public async create({ body, user }: Request<RequestParams, RequestBody, CreateOfferDto>, res: Response): Promise<void> {
+    const result = await this.offerService.create({ ...body, userId: user.id });
+    const offer = await this.offerService.findById(result.id);
+    this.created(res, fillDTO(OfferRdo, offer));
   }
 
-  public async show({params}: Request<ParamsOffer>, res: Response): Promise<void> {
+  public async show({ params }: Request<ParamsOffer>, res: Response): Promise<void> {
     const offer = await this.offerService.findById(params.offerId);
     this.ok(res, fillDTO(OfferRdo, offer));
   }
 
-  public async update({params, body}: Request<ParamsOffer, unknown, UpdateOfferDto>, res: Response): Promise<void> {
+  public async update({ params, body, user }: Request<ParamsOffer, unknown, UpdateOfferDto>, res: Response): Promise<void> {
+    await this.getOfferAndCheckOwner(params.offerId, user.id, 'UpdateOffer');
     const updatedOffer = await this.offerService.updateById(params.offerId, body);
-    this.ok(res, updatedOffer);
+    this.ok(res, fillDTO(OfferRdo, updatedOffer));
   }
 
-  public async delete({params}: Request<ParamsOffer>, res: Response): Promise<void> {
+  public async uploadPreviewImage(req: Request<ParamsOffer>, res: Response): Promise<void> {
+    await this.getOfferAndCheckOwner(req.params.offerId, req.user.id, 'uploadPreviewImage');
+    await this.updatePreviewImage(req.params.offerId, req.file?.filename);
+    this.created(res, fillDTO(UploadImageResponse, { updateDto: { previewImage: req.file?.filename } }));
+  }
+
+  public async uploadImage(req: Request<ParamsOffer>, res: Response): Promise<void> {
+    await this.getOfferAndCheckOwner(req.params.offerId, req.user.id, 'uploadImage');
+    await this.offerService.addImage(req.params.offerId, req.file?.filename);
+    this.noContent(res, 'Image was added');
+  }
+
+  public async removeImage(req: Request<ParamsOffer>, res: Response): Promise<void> {
+    await this.getOfferAndCheckOwner(req.params.offerId, req.user.id, 'removeImage');
+    await this.offerService.removeImage(req.params.offerId, req.file?.filename);
+    this.noContent(res, 'Image was removed');
+  }
+
+  public async delete({ params, user }: Request<ParamsOffer>, res: Response): Promise<void> {
+    await this.getOfferAndCheckOwner(params.offerId, user.id, 'DeleteOffer');
     await this.offerService.deleteById(params.offerId);
     await this.commentService.deleteByOfferId(params.offerId);
-    this.noContent(res, `Предложение ${params.offerId} было удалено.`);
+    this.noContent(res, `Offer ${params.offerId} was removed.`);
   }
 
-  public async showPremium({params}: Request<ParamsCity>, res: Response): Promise<void> {
+  public async showPremium({ params }: Request<ParamsCity>, res: Response): Promise<void> {
     const offers = await this.offerService.findPremiumByCity(params.city);
-    this.ok(res, fillDTO(OfferRdo, offers));
+    this.ok(res, fillDTO(OfferShortRdo, offers));
   }
 
-  public async showFavorites({ user }: Request, _res: Response): Promise<void> {
-    const offers = await this.userService.findFavorites(user.id);
-    this.ok(_res, fillDTO(FavoriteOfferShortDto, offers));
+  public async showFavorites(req: Request, res: Response): Promise<void> {
+    const offers = await this.userService.findFavorites(req.user.id);
+    this.ok(res, fillDTO(FavoriteOfferShortDto, offers));
   }
 
   public async addFavorite({ params, user }: Request<ParamsOffer>, res: Response): Promise<void> {
-    await this.userService.addToFavoritesById(params.offerId, user.id);
-    this.noContent(res, {message: 'Offer was added to favorite'});
+    await this.userService.addToFavoritesById(user.id, params.offerId);
+    this.noContent(res, { message: 'Offer was added to favorite' });
   }
 
   public async deleteFavorite({ params, user }: Request<ParamsOffer>, res: Response): Promise<void> {
-    await this.userService.removeFromFavoritesById(params.offerId, user.id);
-    this.noContent(res, {message: 'Offer was removed from favorite'});
+    await this.userService.removeFromFavoritesById(user.id, params.offerId);
+    this.noContent(res, { message: 'Offer was removed from favorite' });
   }
 }

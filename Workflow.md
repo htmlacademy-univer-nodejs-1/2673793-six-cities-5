@@ -1,4 +1,24 @@
 # Как работать над проектом
+## Запуск
+
+Перед запуском приложения нужно создать файл .env и прописать переменные окружения:
+
+PORT, SALT, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, UPLOAD_DIRECTORY,
+JWT_SECRET,
+STATIC_DIRECTORY_PATH,
+HOST
+
+### примеры переменных окружения можно найти в .env.example, а описание в config.schema.ts
+
+```
+"npm run build && node ./dist/src/main.js" - запуск приложения
+```
+```
+"ts-node ./src/main.cli.ts" - запускает cli команду help
+```
+```
+"json-server ./mocks/mock-server-data.json --port 3123" - для генерации данных командой ts-node ./src/main.cli.ts --generate 10 [mock file] http://localhost:3123/api
+```
 
 ## Окружение
 
