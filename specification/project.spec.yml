@@ -8,6 +8,9 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
   version: 2.0.0
+servers:
+  - url: http://localhost:4000
+    description: Локальный сервер
 tags:
   - name: users
     description: Действия с пользователями.
@@ -87,6 +90,8 @@ paths:
         - users
       summary: Выход из закрытой части приложения
       description: Выход из закрытой части приложения
+      security:
+        - Bearer: [ ]
       responses:
         "204":
           description: Пользователь вышел
@@ -325,10 +330,10 @@ paths:
 components:
   securitySchemes:
     Bearer:
-      type: http
-      scheme: bearer
+      type: apiKey
       in: header
-      description: Токен для проверки авторизации
+      name: Authorization
+      description: Authorization header with Bearer token
 
   schemas:
     createUserDto:
@@ -435,13 +440,13 @@ components:
           example: 6329c3d6a04ab1061c6425ea
         name:
           type: string
-          example: Квартира
+          example: Квартира в Париже
           minLength: 10
           maxLength: 100
 
         description:
           type: string
-          example: Описание
+          example: Просторная квартира в центре Парижа с видом на Эйфелеву башню. Современный ремонт, вся необходимая техника.
           minLength: 20
           maxLength: 1024
 
@@ -484,7 +489,7 @@ components:
         housingType:
           type: string
           enum: [ Apartment, House, Room, Hotel ]
-          example: apartment
+          example: Apartment
 
         roomCount:
           type: integer
@@ -509,7 +514,7 @@ components:
           items:
             type: string
             enum: [ Breakfast, Air conditioning, Laptop friendly workspace, Baby seat, Washer, Towels, Fridge ]
-            example: Breakfast, Laptop
+            example: Breakfast, Laptop friendly workspace
           minItems: 1
 
         offerAuthor:
@@ -531,7 +536,7 @@ components:
 
         name:
           type: string
-          example: Квартира
+          example: Квартира в Париже
           minLength: 10
           maxLength: 100
 
@@ -541,7 +546,7 @@ components:
 
         description:
           type: string
-          example: Описание
+          example: Просторная квартира в центре Парижа с видом на Эйфелеву башню. Современный ремонт, вся необходимая техника.
           minLength: 20
           maxLength: 1024
 
@@ -572,7 +577,7 @@ components:
         housingType:
           type: string
           enum: [ Apartment, House, Room, Hotel ]
-          example: apartment
+          example: Apartment
 
         cost:
           type: number
@@ -589,20 +594,20 @@ components:
       properties:
         name:
           type: string
-          example: Квартира
+          example: Квартира в Брюсселе
           minLength: 10
           maxLength: 100
 
         description:
           type: string
-          example: Описание
+          example: Квартира в Брюсселе с видом на лес.
           minLength: 20
           maxLength: 1024
 
         city:
           type: string
           enum: [ Paris, Cologne, Brussels, Amsterdam, Hamburg, Dusseldorf ]
-          example: Paris
+          example: Brussels
 
         previewImage:
           type: string
@@ -612,7 +617,7 @@ components:
           type: array
           items:
             type: string
-            example: [ offer.jpg, offer_room.jpg ]
+            example: offer.jpg
           minItems: 6
           maxItems: 6
 
@@ -623,7 +628,7 @@ components:
         housingType:
           type: string
           enum: [ Apartment, House, Room, Hotel ]
-          example: apartment
+          example: Apartment
 
         roomCount:
           type: integer
@@ -648,7 +653,7 @@ components:
           items:
             type: string
             enum: [ Breakfast, Air conditioning, Laptop friendly workspace, Baby seat, Washer, Towels, Fridge ]
-            example: [ Breakfast, Laptop ]
+            example: [ Breakfast, Laptop friendly workspace ]
           minItems: 1
 
         coordinates:

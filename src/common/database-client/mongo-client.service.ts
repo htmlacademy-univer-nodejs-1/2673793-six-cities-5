@@ -1,9 +1,9 @@
-import {inject, injectable} from 'inversify';
-import mongoose, {Mongoose} from 'mongoose';
-import {setTimeout} from 'node:timers/promises';
-import {DatabaseClientInterface} from './database-client.interface.js';
-import {LoggerInterface} from '../logger/logger.interface.js';
-import {Component} from '../../types/component.enum.js';
+import { inject, injectable } from 'inversify';
+import mongoose, { Mongoose } from 'mongoose';
+import { setTimeout } from 'node:timers/promises';
+import { DatabaseClientInterface } from './database-client.interface.js';
+import { LoggerInterface } from '../logger/logger.interface.js';
+import { Component } from '../../types/component.enum.js';
 
 const RETRY_COUNT = 5;
 const RETRY_TIMEOUT = 1000;
@@ -15,10 +15,9 @@ export default class MongoClientService implements DatabaseClientInterface {
 
   constructor(
     @inject(Component.LoggerInterface) private readonly logger: LoggerInterface
-  ) {
-  }
+  ) {}
 
-  private async _connectWithRetry(uri: string): Promise<Mongoose> {
+  private async connectWithRetry(uri: string): Promise<Mongoose> {
     let attempt = 0;
     while (attempt < RETRY_COUNT) {
       try {
@@ -34,12 +33,12 @@ export default class MongoClientService implements DatabaseClientInterface {
     throw new Error('Ошибка при подключении к бд');
   }
 
-  private async _connect(uri: string): Promise<void> {
-    this.mongooseInstance = await this._connectWithRetry(uri);
+  private async connectInternal(uri: string): Promise<void> {
+    this.mongooseInstance = await this.connectWithRetry(uri);
     this.isConnected = true;
   }
 
-  private async _disconnect(): Promise<void> {
+  private async disconnectInternal(): Promise<void> {
     await this.mongooseInstance?.disconnect();
     this.isConnected = false;
     this.mongooseInstance = null;
@@ -51,7 +50,7 @@ export default class MongoClientService implements DatabaseClientInterface {
     }
 
     this.logger.info('Попытка подключения к MongoDB');
-    await this._connect(uri);
+    await this.connectInternal(uri);
     this.logger.info('Соединение с MongoDB установлено');
   }
 
@@ -60,7 +59,7 @@ export default class MongoClientService implements DatabaseClientInterface {
       throw new Error('Нет соединения с бд');
     }
 
-    await this._disconnect();
+    await this.disconnectInternal();
     this.logger.info('Соединение с бд закрыто');
   }
 }
